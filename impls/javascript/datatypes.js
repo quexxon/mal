@@ -1,3 +1,5 @@
+'use strict'
+
 class Nil {}
 
 class Pair {
@@ -8,6 +10,25 @@ class Pair {
 
         this.car = car
         this.cdr = cdr
+    }
+
+    *[Symbol.iterator]() {
+        let pair = this
+
+        while (pair !== null) {
+            yield pair.car
+            pair = pair.cdr
+        }
+    }
+
+    toArray() {
+        const array = []
+
+        for (const car of this) {
+            array.push(car)
+        }
+
+        return array
     }
 }
 

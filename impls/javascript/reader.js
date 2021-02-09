@@ -1,4 +1,4 @@
-const { Nil, Pair } = require('./datatypes')
+'use strict'
 
 const MAL_TOKEN_REGEX = /[\s,]*(~@|[\[\]{}()'`~^@]|"(?:\\.|[^\\"])*"?|;.*|[^\s\[\]{}('"`,;)]*)/g
 
@@ -16,8 +16,7 @@ function tokenize(string) {
 }
 
 function readList(reader) {
-    let list = new Nil()
-    let tail
+    const list = { type: 'list', value: [] }
 
     reader.next()
 
@@ -33,18 +32,12 @@ function readList(reader) {
             return list
         }
 
-        if (list instanceof Nil) {
-            list = new Pair(readForm(reader))
-            tail = list
-        } else {
-            tail.cdr = new Pair(readForm(reader))
-            tail = tail.cdr
-        }
+        list.value.push(readForm(reader))
     }
 }
 
 function readVector(reader) {
-    const vector = []
+    const vector = { type: 'vector', value: [] }
 
     reader.next()
 
@@ -60,40 +53,12 @@ function readVector(reader) {
             return vector
         }
 
-        vector.push(readForm(reader))
+        vector.value.push(readForm(reader))
     }
-}
-
-function readAtom(reader) {
-    const atom = reader.next()
-
-    const maybeInt = parseInt(atom)
-    if (!Number.isNaN(maybeInt)) {
-        return maybeInt
-    }
-
-    return Symbol.for(atom)
-}
-
-function readerMacro(reader, name) {
-    reader.next()
-
-    return new Pair(Symbol.for(name), new Pair(readForm(reader)))
-}
-
-function readMetadata(reader) {
-    reader.next()
-    const hashMap = readHashMap(reader)
-    const form = readForm(reader)
-
-    return new Pair(Symbol.for('with-meta'), new Pair(form, new Pair(hashMap)))
 }
 
 function readHashMap(reader) {
-    const hashMap = {
-        type: 'hash-map',
-        contents: []
-    }
+    const hashMap = { type: 'hash-map', value: [] }
 
     reader.next()
 
@@ -113,8 +78,39 @@ function readHashMap(reader) {
             return hashMap
         }
 
-        hashMap.contents.push(readForm(reader))
+        hashMap.value.push(readForm(reader))
         nextIsKey = !nextIsKey
+    }
+}
+
+function readAtom(reader) {
+    const atom = reader.next()
+
+    const maybeInt = parseInt(atom)
+    if (!Number.isNaN(maybeInt)) {
+        return maybeInt
+    }
+
+    return Symbol.for(atom)
+}
+
+function readerMacro(reader, name) {
+    reader.next()
+
+    return {
+        type: 'list',
+        value: [ Symbol.for(name), readForm(reader) ],
+    }
+}
+
+function readMetadata(reader) {
+    reader.next()
+    const hashMap = readHashMap(reader)
+    const form = readForm(reader)
+
+    return {
+        type: 'list',
+        value: [ Symbol.for('with-meta'), form, hashMap ],
     }
 }
 

@@ -1,3 +1,5 @@
+'use strict'
+
 const { Nil, Pair } = require('./datatypes')
 
 function printString(form) {
@@ -21,12 +23,19 @@ function printString(form) {
         return form.toString()
     }
 
+    if (typeof form === 'string') {
+        return form
+    }
+
     if (form instanceof Pair) {
+        if (form.cdr !== null && !(form.cdr instanceof Pair)) {
+            return `(${printString(form.car)} . ${printString(form.cdr)})`
+        }
+
         const contents = []
 
-        while (form !== null) {
-            contents.push(printString(form.car))
-            form = form.cdr
+        for (const subform of form) {
+            contents.push(printString(subform))
         }
 
         return `(${contents.join(' ')})`
@@ -42,18 +51,15 @@ function printString(form) {
         return `[${contents.join(' ')}]`
     }
 
-    if (form.type === 'hash-map') {
+    if (form instanceof Map) {
         const contents = []
 
-        for (const subform of form.contents) {
-            contents.push(printString(subform))
+        for (const [key, value] of form) {
+            contents.push(printString(key))
+            contents.push(printString(value))
         }
 
         return `{${contents.join(' ')}}`
-    }
-
-    if (typeof form === 'string') {
-        return form
     }
 
     throw new Error('Unrecognized form')
