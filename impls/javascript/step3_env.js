@@ -1,4 +1,4 @@
-const { coreEnv } = require('./env')
+const { coreEnv, Env } = require('./env')
 const { Nil, Pair } = require('./datatypes')
 const { Reader } = require('./reader')
 const printer = require('./printer')
@@ -14,14 +14,50 @@ function EVAL(ast, env) {
     }
 
     if (ast?.type === 'list') {
-        const list = evalAst(ast, env)
+        switch (ast?.value[0]) {
+            case Symbol.for('def!'): {
+                if (ast?.value?.length !== 3) {
+                    throw new Error('Invalid format for def!')
+                }
+                const value = EVAL(ast?.value[2], env)
+                env.set(ast?.value[1], value)
+                return value
+            }
 
-        if (typeof list.car !== 'function') {
-            throw new Error('First item in list must be a function')
+            case Symbol.for('let*'): {
+                const letEnv = new Env(env)
+
+                if (ast?.value?.length < 2) {
+                    throw new Error('Invalid format for let*')
+                }
+
+                const sequence = ast?.value[1]
+                if (
+                    !['list', 'vector'].includes(sequence?.type) ||
+                    (sequence?.value?.length || 1) % 2 !== 0
+                ) {
+                    throw new Error('Invalid format for let* bindings')
+                }
+
+                for (let i = 0; i < sequence.value.length; i++) {
+                    letEnv.set(sequence.value[i++], EVAL(sequence.value[i], letEnv))
+                }
+
+                const body = ast?.value[2] || null
+                return EVAL(body, letEnv)
+            }
+
+            default: {
+                const list = evalAst(ast, env)
+
+                if (typeof list.car !== 'function') {
+                    throw new Error('First item in list must be a function')
+                }
+
+                const args = list.cdr === null ? [] : list.cdr.toArray()
+                return list.car.apply(null, args)
+            }
         }
-
-        const args = list.cdr === null ? [] : list.cdr.toArray()
-        return list.car.apply(null, args)
     }
 
     return evalAst(ast, env)
@@ -38,7 +74,7 @@ function evalAst(ast, env) {
         const value = env.get(ast)
 
         if (value === undefined) {
-            throw new Error(`Unknown symbol: ${ast.description}`)
+            throw new Error(`'${ast.description}' not found`)
         }
 
         return value

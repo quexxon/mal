@@ -1,13 +1,13 @@
 'use strict'
 
-const { Nil, Pair } = require('./datatypes')
+const { nil, Cons, List } = require('./datatypes')
 
 function printString(form) {
     if (form === null) {
         return 'nil'
     }
 
-    if (form instanceof Nil) {
+    if (form === nil) {
         return '()'
     }
 
@@ -27,11 +27,15 @@ function printString(form) {
         return form
     }
 
-    if (form instanceof Pair) {
-        if (form.cdr !== null && !(form.cdr instanceof Pair)) {
-            return `(${printString(form.car)} . ${printString(form.cdr)})`
-        }
+    if (typeof form === 'function') {
+        return '#<function>'
+    }
 
+    if (form instanceof Cons) {
+        return `(${printString(form.car)} . ${printString(form.cdr)})`
+    }
+
+    if (form instanceof List) {
         const contents = []
 
         for (const subform of form) {
